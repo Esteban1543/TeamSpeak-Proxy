@@ -1,0 +1,20 @@
+---
+/**
+ * Insignia de estado. El color depende de `data-status` (ver global.css),
+ * así el mismo marcado sirve en plantillas que se rellenan desde TypeScript.
+ */
+interface Props {
+  status?: string;
+  class?: string;
+}
+
+const { status = 'pending', class: className } = Astro.props;
+---
+
+<span
+  class:list={['badge inline-flex items-center gap-2 font-mono text-[11px] tracking-[0.15em] uppercase', className]}
+  data-status={status}
+>
+  <span class="dot h-1.5 w-1.5 rounded-full bg-current"></span>
+  <span data-badge-label><slot /></span>
+</span>

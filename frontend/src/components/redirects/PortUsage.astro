@@ -1,0 +1,47 @@
+<section class="panel flex flex-col justify-between gap-6 p-6" aria-labelledby="port-usage-title">
+  <div class="flex items-baseline justify-between gap-2">
+    <h2 id="port-usage-title" class="label">Puertos</h2>
+    <p class="font-mono text-[11px] text-faint"><span id="port-range">—</span></p>
+  </div>
+  <p class="font-mono">
+    <span id="port-used" class="text-5xl font-light text-ink">–</span>
+    <span class="text-xl text-faint">/</span>
+    <span id="port-total" class="text-xl text-dim">–</span>
+    <span class="label ml-1">en uso</span>
+  </p>
+  <div
+    class="h-px bg-line-strong"
+    role="progressbar"
+    aria-labelledby="port-usage-title"
+    aria-valuemin="0"
+    id="port-bar"
+  >
+    <div id="port-bar-fill" class="h-px w-0 bg-accent shadow-[0_0_12px_currentColor] text-accent transition-all duration-500"></div>
+  </div>
+</section>
+
+<script>
+  import { $portUsage } from '../../lib/store';
+
+  const used = document.getElementById('port-used')!;
+  const total = document.getElementById('port-total')!;
+  const range = document.getElementById('port-range')!;
+  const bar = document.getElementById('port-bar')!;
+  const fill = document.getElementById('port-bar-fill')!;
+
+  $portUsage.subscribe((usage) => {
+    if (!usage) return;
+    used.textContent = String(usage.used);
+    total.textContent = String(usage.total);
+    range.textContent = `${usage.range_start}–${usage.range_end}`;
+    const pct = usage.total ? Math.min(100, (usage.used / usage.total) * 100) : 0;
+    fill.style.width = `${pct}%`;
+    const levels = { accent: 'bg-accent text-accent', warn: 'bg-warn text-warn', bad: 'bg-bad text-bad' };
+    const level = pct >= 100 ? 'bad' : pct >= 80 ? 'warn' : 'accent';
+    for (const [name, classes] of Object.entries(levels)) {
+      for (const cls of classes.split(' ')) fill.classList.toggle(cls, name === level);
+    }
+    bar.setAttribute('aria-valuemax', String(usage.total));
+    bar.setAttribute('aria-valuenow', String(usage.used));
+  });
+</script>

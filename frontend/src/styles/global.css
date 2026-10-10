@@ -1,0 +1,106 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-void: #04060a;
+  --color-panel: #0a0e14;
+  --color-line: #ffffff12;
+  --color-line-strong: #ffffff24;
+  --color-ink: #e6edf3;
+  --color-dim: #7d8794;
+  --color-faint: #4a525e;
+  --color-accent: #22e1ff;
+  --color-accent-2: #8b5cf6;
+  --color-ok: #34f5a4;
+  --color-warn: #ffc857;
+  --color-bad: #ff4d6d;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--color-void);
+    background-image:
+      radial-gradient(60rem 30rem at 85% -10%, #22e1ff14, transparent 60%),
+      radial-gradient(50rem 30rem at -10% 110%, #8b5cf614, transparent 60%),
+      linear-gradient(var(--color-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-line) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+    background-attachment: fixed;
+    @apply font-sans text-ink antialiased;
+  }
+  ::selection {
+    background: #22e1ff40;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer components {
+  /* Panel de cristal con esquinas marcadas */
+  .panel {
+    @apply relative border border-line bg-panel/70 backdrop-blur-md;
+  }
+  .panel::before,
+  .panel::after {
+    content: '';
+    @apply pointer-events-none absolute h-3 w-3 border-accent/60;
+  }
+  .panel::before {
+    @apply -top-px -left-px border-t border-l;
+  }
+  .panel::after {
+    @apply -right-px -bottom-px border-r border-b;
+  }
+
+  /* Etiqueta técnica: MONO · MAYÚSCULAS · ESPACIADA */
+  .label {
+    @apply font-mono text-[11px] tracking-[0.2em] text-dim uppercase;
+  }
+
+  .badge {
+    @apply text-dim;
+  }
+  .badge[data-status='active'] {
+    @apply text-ok;
+  }
+  .badge[data-status='pending'] {
+    @apply text-warn;
+  }
+  .badge[data-status='error'] {
+    @apply text-bad;
+  }
+  .badge .dot {
+    box-shadow: 0 0 8px currentColor;
+  }
+  .badge[data-status='active'] .dot,
+  .badge[data-status='pending'] .dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+}
+
+@utility glow {
+  box-shadow:
+    0 0 0 1px #22e1ff55,
+    0 0 24px -4px #22e1ff80;
+}
+
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

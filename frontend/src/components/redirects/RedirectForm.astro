@@ -1,0 +1,98 @@
+---
+import Button from '../ui/Button.astro';
+import Input from '../ui/Input.astro';
+---
+
+<section class="panel p-6">
+  <h2 class="label"><span class="text-accent">+</span> Nueva redirección</h2>
+  <form id="redirect-form" class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start" novalidate>
+    <Input
+      id="redirect-target"
+      name="target"
+      label="Servidor TeamSpeak 3"
+      hideLabel
+      placeholder="ts.ejemplo.com · 1.2.3.4 · 1.2.3.4:9987"
+      hint="Sin puerto → registro SRV o 9987"
+      autocomplete="off"
+      spellcheck="false"
+      required
+      maxlength={260}
+      class="flex-1"
+    />
+    <Button id="redirect-submit" type="submit" class="sm:min-w-44">Crear redirección</Button>
+  </form>
+  <p id="redirect-form-error" class="mt-4 font-mono text-xs text-bad" role="alert" hidden></p>
+  <div id="redirect-created" class="mt-6 border-l-2 border-ok pl-4" hidden>
+    <p class="label">Conectar en TeamSpeak a</p>
+    <p class="mt-1 font-mono text-2xl text-ok [text-shadow:0_0_18px_#34f5a466]" id="redirect-created-address"></p>
+  </div>
+</section>
+
+<script>
+  import { $portUsage, addRedirect, errorMessage, toast } from '../../lib/store';
+
+  const form = document.getElementById('redirect-form') as HTMLFormElement;
+  const input = document.getElementById('redirect-target') as HTMLInputElement;
+  const submit = document.getElementById('redirect-submit') as HTMLButtonElement;
+  const errorBox = document.getElementById('redirect-form-error')!;
+  const created = document.getElementById('redirect-created')!;
+  const createdAddress = document.getElementById('redirect-created-address')!;
+
+  let busy = false;
+  let full = false;
+
+  function syncDisabled(): void {
+    submit.disabled = busy || full;
+    input.disabled = busy;
+    submit.textContent = busy ? 'Creando_' : 'Crear redirección';
+  }
+
+  function showError(message: string | null): void {
+    errorBox.textContent = message ?? '';
+    errorBox.hidden = !message;
+    input.setAttribute('aria-invalid', message ? 'true' : 'false');
+  }
+
+  $portUsage.subscribe((usage) => {
+    full = !!usage && usage.free <= 0;
+    syncDisabled();
+    if (full) {
+      showError('No quedan puertos libres en el rango. Elimina alguna redirección para crear otra.');
+    } else if (errorBox.dataset['reason'] !== 'request') {
+      showError(null);
+    }
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const target = input.value.trim();
+    if (!target) {
+      showError('Escribe una IP o un dominio.');
+      input.focus();
+      return;
+    }
+    busy = true;
+    syncDisabled();
+    showError(null);
+    delete errorBox.dataset['reason'];
+    created.hidden = true;
+    try {
+      const redirect = await addRedirect(target);
+      input.value = '';
+      createdAddress.textContent = redirect.public_address;
+      created.hidden = false;
+      if (redirect.status === 'error') {
+        toast(`Creada, pero el proxy no arrancó: ${redirect.error ?? 'error desconocido'}`, 'error', 8000);
+      } else {
+        toast(`Redirección creada en ${redirect.public_address}`, 'success');
+      }
+    } catch (err) {
+      errorBox.dataset['reason'] = 'request';
+      showError(errorMessage(err));
+    } finally {
+      busy = false;
+      syncDisabled();
+      input.focus();
+    }
+  });
+</script>

@@ -1,0 +1,23 @@
+# Secretos y configuración local
+.env
+!.env.example
+
+# Datos (SQLite)
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Node / Astro
+node_modules/
+dist/
+.astro/
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store

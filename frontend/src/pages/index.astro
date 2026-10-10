@@ -1,0 +1,28 @@
+---
+import AdminLayout from '../layouts/AdminLayout.astro';
+import PortUsage from '../components/redirects/PortUsage.astro';
+import RedirectForm from '../components/redirects/RedirectForm.astro';
+import RedirectTable from '../components/redirects/RedirectTable.astro';
+---
+
+<AdminLayout title="Panel">
+  <div class="grid gap-6 lg:grid-cols-[1fr_18rem]">
+    <RedirectForm />
+    <PortUsage />
+  </div>
+  <RedirectTable />
+</AdminLayout>
+
+<script>
+  import { errorMessage, refresh, startPolling, toast } from '../lib/store';
+
+  document.addEventListener(
+    'session:ready',
+    () => {
+      refresh()
+        .catch((err) => toast(errorMessage(err), 'error'))
+        .finally(startPolling);
+    },
+    { once: true },
+  );
+</script>

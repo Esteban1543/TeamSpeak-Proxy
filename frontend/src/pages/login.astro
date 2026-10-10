@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/ui/Button.astro';
+import Input from '../components/ui/Input.astro';
+
+const appName = import.meta.env.PUBLIC_APP_NAME ?? 'TS3 Proxy Panel';
+---
+
+<BaseLayout title="Iniciar sesión">
+  <main class="flex min-h-dvh items-center justify-center px-4 py-12">
+    <div class="w-full max-w-sm">
+      <div class="mb-10 flex flex-col items-center gap-4 text-center">
+        <span class="h-2.5 w-2.5 rounded-full bg-accent glow"></span>
+        <h1 class="font-mono text-sm tracking-[0.3em] text-ink uppercase">{appName}</h1>
+        <p class="label text-faint">// acceso restringido</p>
+      </div>
+
+      <form id="login-form" class="panel space-y-7 p-8" novalidate>
+        <Input id="login-username" name="username" label="Usuario" autocomplete="username" required autofocus />
+        <Input
+          id="login-password"
+          name="password"
+          type="password"
+          label="Contraseña"
+          autocomplete="current-password"
+          required
+        />
+        <p id="login-error" class="font-mono text-xs text-bad" role="alert" hidden></p>
+        <Button id="login-submit" type="submit" class="w-full">Entrar →</Button>
+      </form>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  import { login } from '../lib/api/auth';
+  import { redirectIfLoggedIn } from '../lib/guard';
+  import { errorMessage } from '../lib/store';
+
+  redirectIfLoggedIn();
+
+  const form = document.getElementById('login-form') as HTMLFormElement;
+  const username = document.getElementById('login-username') as HTMLInputElement;
+  const password = document.getElementById('login-password') as HTMLInputElement;
+  const submit = document.getElementById('login-submit') as HTMLButtonElement;
+  const errorBox = document.getElementById('login-error')!;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!username.value.trim() || !password.value) {
+      errorBox.textContent = 'Introduce usuario y contraseña.';
+      errorBox.hidden = false;
+      return;
+    }
+    submit.disabled = true;
+    submit.textContent = 'Autenticando_';
+    errorBox.hidden = true;
+    try {
+      await login(username.value.trim(), password.value);
+      location.replace('/');
+    } catch (err) {
+      errorBox.textContent = errorMessage(err);
+      errorBox.hidden = false;
+      password.value = '';
+      password.focus();
+      submit.disabled = false;
+      submit.textContent = 'Entrar →';
+    }
+  });
+</script>

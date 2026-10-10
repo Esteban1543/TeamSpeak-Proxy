@@ -1,0 +1,26 @@
+---
+import '../styles/global.css';
+import Toast from '../components/ui/Toast.astro';
+
+interface Props {
+  title: string;
+}
+
+const appName = import.meta.env.PUBLIC_APP_NAME ?? 'TS3 Proxy Panel';
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title} · {appName}</title>
+  </head>
+  <body class="min-h-dvh">
+    <slot />
+    <Toast />
+  </body>
+</html>

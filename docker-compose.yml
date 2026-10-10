@@ -1,0 +1,38 @@
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    # Obligatorio: el proxy abre puertos UDP dinámicamente y publicar rangos
+    # grandes con `ports:` es lento y añade latencia.
+    network_mode: host
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    # Solo si en el futuro se usa FORWARDING_ENGINE=nftables:
+    # cap_add:
+    #   - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,urllib.request; urllib.request.urlopen(f\"http://127.0.0.1:{os.environ.get('API_PORT','8000')}/api/health\", timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    # Imagen multi-stage: compila el frontend (lee frontend/.env) y lo sirve con Caddy.
+    build: ./frontend
+    network_mode: host
+    environment:
+      # Vacío -> ":80" (HTTP por IP). Caddy no aplica su valor por defecto si la variable existe vacía.
+      DOMAIN: ${DOMAIN:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

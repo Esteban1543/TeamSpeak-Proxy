@@ -1,0 +1,184 @@
+---
+import Badge from '../ui/Badge.astro';
+import Button from '../ui/Button.astro';
+---
+
+<section class="panel">
+  <div class="flex items-center justify-between gap-2 px-6 py-5">
+    <h2 class="label">Redirecciones</h2>
+    <span id="redirect-count" class="font-mono text-[11px] text-faint"></span>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[56rem] text-left text-sm">
+      <thead>
+        <tr class="border-y border-line">
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Destino</th>
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Resuelto</th>
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Dirección pública</th>
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Estado</th>
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Tráfico</th>
+          <th scope="col" class="label px-6 py-3 font-normal text-faint">Creada</th>
+          <th scope="col" class="px-6 py-3"><span class="sr-only">Acciones</span></th>
+        </tr>
+      </thead>
+      <tbody id="redirect-rows" class="divide-y divide-line"></tbody>
+    </table>
+  </div>
+
+  <p id="redirect-empty" class="label px-6 py-14 text-center text-faint" hidden>
+    // sin redirecciones activas
+  </p>
+  <p id="redirect-loading" class="label animate-pulse px-6 py-14 text-center text-faint">Cargando_</p>
+
+  <template id="redirect-row-template">
+    <tr class="group align-top transition-colors hover:bg-accent/[0.03]">
+      <td class="px-6 py-4">
+        <div data-field="target" class="break-all text-ink"></div>
+        <div data-field="kind" class="mt-0.5 font-mono text-[10px] tracking-[0.2em] text-faint uppercase"></div>
+      </td>
+      <td class="px-6 py-4 font-mono text-xs text-dim">
+        <div data-field="resolved"></div>
+        <div data-field="resolved-at" class="mt-0.5 text-[10px] text-faint"></div>
+      </td>
+      <td class="px-6 py-4">
+        <button
+          type="button"
+          data-action="copy"
+          class="font-mono text-accent transition-[text-shadow] hover:[text-shadow:0_0_12px_#22e1ff99]"
+          title="Copiar"
+        >
+          <span data-field="public"></span>
+        </button>
+      </td>
+      <td class="px-6 py-4">
+        <Badge />
+        <div data-field="error" class="mt-1 max-w-56 font-mono text-[11px] text-bad/80"></div>
+      </td>
+      <td class="px-6 py-4 font-mono text-xs text-dim">
+        <div data-field="clients"></div>
+        <div data-field="bytes" class="mt-0.5 text-[10px] text-faint"></div>
+      </td>
+      <td data-field="created" class="px-6 py-4 font-mono text-xs whitespace-nowrap text-faint"></td>
+      <td class="px-6 py-4 text-right whitespace-nowrap">
+        <div data-confirm="idle" class="opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          <Button variant="danger" size="sm" data-action="ask-delete">Eliminar</Button>
+        </div>
+        <div data-confirm="ask" class="flex items-center justify-end gap-1" hidden>
+          <span class="label mr-1 text-bad">¿Eliminar?</span>
+          <Button variant="danger" size="sm" data-action="confirm-delete" class="text-bad">Sí</Button>
+          <Button variant="ghost" size="sm" data-action="cancel-delete">No</Button>
+        </div>
+      </td>
+    </tr>
+  </template>
+</section>
+
+<script>
+  import { formatBytes, formatDate } from '../../lib/format';
+  import { $loaded, $redirects, errorMessage, removeRedirect, toast } from '../../lib/store';
+  import type { Redirect } from '../../types/redirect';
+
+  const STATUS_LABELS: Record<Redirect['status'], string> = {
+    active: 'Activa',
+    pending: 'Pendiente',
+    error: 'Error',
+    stopped: 'Detenida',
+  };
+
+  const tbody = document.getElementById('redirect-rows')!;
+  const empty = document.getElementById('redirect-empty')!;
+  const loading = document.getElementById('redirect-loading')!;
+  const count = document.getElementById('redirect-count')!;
+  const template = document.getElementById('redirect-row-template') as HTMLTemplateElement;
+
+  // Estado de la UI que debe sobrevivir a los refrescos periódicos.
+  const confirming = new Set<number>();
+  const deleting = new Set<number>();
+
+  function field(row: Element, name: string): HTMLElement {
+    return row.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
+  }
+
+  function renderRow(r: Redirect): HTMLTableRowElement {
+    const row = (template.content.firstElementChild as HTMLTableRowElement).cloneNode(true) as HTMLTableRowElement;
+    row.dataset['id'] = String(r.id);
+    field(row, 'target').textContent = r.target;
+    field(row, 'kind').textContent = r.is_domain ? 'Dominio' : 'IP';
+    field(row, 'resolved').textContent = r.resolved_address;
+    field(row, 'resolved-at').textContent = r.resolved_at ? `Resuelto ${formatDate(r.resolved_at)}` : '';
+    field(row, 'public').textContent = r.public_address;
+
+    const badge = row.querySelector<HTMLElement>('.badge')!;
+    badge.dataset['status'] = r.status;
+    badge.querySelector('[data-badge-label]')!.textContent = STATUS_LABELS[r.status] ?? r.status;
+    field(row, 'error').textContent = r.error ?? '';
+
+    field(row, 'clients').textContent = `${r.clients} ${r.clients === 1 ? 'cliente' : 'clientes'}`;
+    field(row, 'bytes').textContent = `↑ ${formatBytes(r.bytes_in)} · ↓ ${formatBytes(r.bytes_out)}`;
+    field(row, 'created').textContent = formatDate(r.created_at);
+
+    const asking = confirming.has(r.id);
+    row.querySelector<HTMLElement>('[data-confirm="idle"]')!.hidden = asking;
+    row.querySelector<HTMLElement>('[data-confirm="ask"]')!.hidden = !asking;
+    if (deleting.has(r.id)) {
+      row.querySelectorAll('button').forEach((b) => (b.disabled = true));
+      row.classList.add('opacity-50');
+    }
+    return row;
+  }
+
+  function render(): void {
+    const redirects = $redirects.get();
+    const loaded = $loaded.get();
+    loading.hidden = loaded;
+    empty.hidden = !loaded || redirects.length > 0;
+    count.textContent = loaded ? `${redirects.length} en total` : '';
+    tbody.replaceChildren(...redirects.map(renderRow));
+  }
+
+  $redirects.subscribe(render);
+  $loaded.subscribe(render);
+
+  tbody.addEventListener('click', async (event) => {
+    const button = (event.target as Element).closest<HTMLButtonElement>('[data-action]');
+    const row = button?.closest<HTMLTableRowElement>('tr');
+    if (!button || !row) return;
+    const id = Number(row.dataset['id']);
+
+    switch (button.dataset['action']) {
+      case 'copy': {
+        const text = field(row, 'public').textContent ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+          toast(`Copiado: ${text}`, 'info', 2500);
+        } catch {
+          toast('No se pudo copiar (el portapapeles requiere HTTPS)', 'error');
+        }
+        break;
+      }
+      case 'ask-delete':
+        confirming.add(id);
+        render();
+        break;
+      case 'cancel-delete':
+        confirming.delete(id);
+        render();
+        break;
+      case 'confirm-delete':
+        confirming.delete(id);
+        deleting.add(id);
+        render();
+        try {
+          await removeRedirect(id);
+          toast('Redirección eliminada; el puerto vuelve a estar libre', 'success');
+        } catch (err) {
+          toast(errorMessage(err), 'error');
+        } finally {
+          deleting.delete(id);
+          render();
+        }
+        break;
+    }
+  });
+</script>

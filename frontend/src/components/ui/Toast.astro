@@ -1,0 +1,42 @@
+<div
+  id="toast-region"
+  class="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-2 p-4 sm:items-end"
+  aria-live="polite"
+  role="status"
+>
+</div>
+
+<script>
+  import { $toasts, dismissToast } from '../../lib/store';
+
+  const region = document.getElementById('toast-region')!;
+  const accents = {
+    success: 'border-l-ok text-ok',
+    error: 'border-l-bad text-bad',
+    info: 'border-l-accent text-accent',
+  } as const;
+  const prefixes = { success: 'OK', error: 'ERR', info: 'INFO' } as const;
+
+  $toasts.subscribe((toasts) => {
+    region.replaceChildren(
+      ...toasts.map((t) => {
+        const el = document.createElement('div');
+        el.className = `pointer-events-auto flex w-full max-w-sm items-start gap-3 border border-line border-l-2 bg-panel/95 px-4 py-3 font-mono text-xs backdrop-blur-md ${accents[t.kind]}`;
+        const tag = document.createElement('span');
+        tag.className = 'tracking-[0.2em]';
+        tag.textContent = prefixes[t.kind];
+        const text = document.createElement('p');
+        text.className = 'flex-1 text-ink';
+        text.textContent = t.message;
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'text-faint hover:text-ink';
+        close.setAttribute('aria-label', 'Cerrar');
+        close.textContent = '✕';
+        close.addEventListener('click', () => dismissToast(t.id));
+        el.append(tag, text, close);
+        return el;
+      }),
+    );
+  });
+</script>

@@ -1,0 +1,30 @@
+# Sin DOMAIN: sirve por HTTP en el puerto 80 (acceso por IP).
+# Con DOMAIN=panel.tudominio.com: HTTPS automático con Let's Encrypt.
+{$DOMAIN::80} {
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	# API: el backend solo escucha en 127.0.0.1 (network_mode: host).
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Frontend estático compilado por Astro.
+	handle {
+		root * /srv
+		@assets path /_astro/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /_astro/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} {path}.html
+		file_server
+	}
+}
