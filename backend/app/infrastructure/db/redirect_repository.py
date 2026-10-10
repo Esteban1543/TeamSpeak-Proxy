@@ -13,8 +13,9 @@ from app.infrastructure.db.database import Database
 
 _COLUMNS = (
     "target_raw, target_host, target_port, is_domain, resolved_ip, resolved_port, "
-    "port, status, error, created_at, updated_at, resolved_at"
+    "port, status, error, created_at, updated_at, resolved_at, alias"
 )
+_PLACEHOLDERS = ",".join("?" * len(_COLUMNS.split(",")))
 
 
 def _dt(value: str | None) -> datetime | None:
@@ -39,6 +40,7 @@ def _to_row(r: Redirect) -> tuple:
         _iso(r.created_at),
         _iso(r.updated_at),
         _iso(r.resolved_at),
+        r.alias,
     )
 
 
@@ -52,6 +54,7 @@ def _from_row(row: aiosqlite.Row) -> Redirect:
         resolved_ip=row["resolved_ip"],
         resolved_port=row["resolved_port"],
         port=row["port"],
+        alias=row["alias"],
         status=RedirectStatus(row["status"]),
         error=row["error"],
         created_at=_dt(row["created_at"]),  # type: ignore[arg-type]
@@ -74,7 +77,7 @@ class SqliteRedirectRepository:
             redirect = build(port)
             try:
                 cur = await conn.execute(
-                    f"INSERT INTO redirects ({_COLUMNS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                    f"INSERT INTO redirects ({_COLUMNS}) VALUES ({_PLACEHOLDERS})",
                     _to_row(redirect),
                 )
             except aiosqlite.IntegrityError as exc:  # UNIQUE(port): no debería ocurrir

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 
 from app.api.deps import CurrentUser, RedirectServiceDep, SettingsDep
-from app.schemas.redirects import PortUsageOut, RedirectCreate, RedirectOut
+from app.schemas.redirects import PortUsageOut, RedirectCreate, RedirectOut, RedirectUpdate
 
 router = APIRouter(prefix="/api", tags=["redirects"])
 
@@ -15,7 +15,15 @@ async def list_redirects(_: CurrentUser, service: RedirectServiceDep, settings: 
 async def create_redirect(
     body: RedirectCreate, _: CurrentUser, service: RedirectServiceDep, settings: SettingsDep
 ) -> RedirectOut:
-    view = await service.create(body.target)
+    view = await service.create(body.target, body.alias)
+    return RedirectOut.from_view(view, settings.public_host)
+
+
+@router.patch("/redirects/{redirect_id}", response_model=RedirectOut)
+async def update_redirect(
+    redirect_id: int, body: RedirectUpdate, _: CurrentUser, service: RedirectServiceDep, settings: SettingsDep
+) -> RedirectOut:
+    view = await service.rename(redirect_id, body.alias)
     return RedirectOut.from_view(view, settings.public_host)
 
 

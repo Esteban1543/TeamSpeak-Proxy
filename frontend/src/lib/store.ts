@@ -4,7 +4,7 @@
  */
 import { atom } from 'nanostores';
 import { ApiError } from './api/client';
-import { createRedirect, deleteRedirect, getPortUsage, listRedirects } from './api/redirects';
+import { createRedirect, deleteRedirect, getPortUsage, listRedirects, updateRedirectAlias } from './api/redirects';
 import type { PortUsage, Redirect } from '../types/redirect';
 
 export type ToastKind = 'success' | 'error' | 'info';
@@ -44,17 +44,24 @@ export async function refreshUsage(): Promise<void> {
 
 export async function refresh(): Promise<void> {
   const [redirects, usage] = await Promise.all([listRedirects(), getPortUsage()]);
+  // Primero la hora, para que los suscriptores de $redirects ya la vean actualizada.
+  $lastUpdated.set(new Date());
   $redirects.set(redirects);
   $portUsage.set(usage);
   $loaded.set(true);
-  $lastUpdated.set(new Date());
 }
 
-export async function addRedirect(target: string): Promise<Redirect> {
-  const created = await createRedirect(target);
+export async function addRedirect(target: string, alias: string): Promise<Redirect> {
+  const created = await createRedirect(target, alias);
   $redirects.set([...$redirects.get().filter((r) => r.id !== created.id), created]);
   await refreshUsage();
   return created;
+}
+
+export async function renameRedirect(id: number, alias: string): Promise<Redirect> {
+  const updated = await updateRedirectAlias(id, alias);
+  $redirects.set($redirects.get().map((r) => (r.id === id ? updated : r)));
+  return updated;
 }
 
 export async function removeRedirect(id: number): Promise<void> {

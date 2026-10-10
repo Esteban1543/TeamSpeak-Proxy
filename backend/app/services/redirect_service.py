@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 
 from app.domain.errors import EngineError, RedirectNotFound
-from app.domain.models import Redirect, RedirectStatus, parse_target, utcnow
+from app.domain.models import Redirect, RedirectStatus, normalize_alias, parse_target, utcnow
 from app.domain.ports import ForwardingEngine, ProxyStats, RedirectRepository, Resolver
 from app.services.port_allocator import PortAllocator, PortUsage
 
@@ -35,7 +35,8 @@ class RedirectService:
         # Serializa cambios de estado (crear/borrar/reconciliar) sobre el motor.
         self.lock = asyncio.Lock()
 
-    async def create(self, raw_target: str) -> RedirectView:
+    async def create(self, raw_target: str, alias: str) -> RedirectView:
+        alias = normalize_alias(alias)
         target = parse_target(raw_target)
         ip, port = await self._resolver.resolve(target.host, target.port)
         now = utcnow()
@@ -49,6 +50,7 @@ class RedirectService:
                 resolved_ip=ip,
                 resolved_port=port,
                 port=public_port,
+                alias=alias,
                 created_at=now,
                 updated_at=now,
                 resolved_at=now if target.is_domain else None,
@@ -56,7 +58,9 @@ class RedirectService:
 
         async with self.lock:
             redirect = await self._repo.allocate_and_insert(build, self._allocator.choose)
-            log.info("Redirección #%s creada: :%s -> %s (%s:%s)", redirect.id, redirect.port, target.raw, ip, port)
+            log.info(
+                "Redirección #%s '%s' creada: :%s -> %s (%s:%s)", redirect.id, alias, redirect.port, target.raw, ip, port
+            )
             await self.activate(redirect)
         return self._view(redirect)
 
@@ -73,6 +77,18 @@ class RedirectService:
         if redirect.status != RedirectStatus.ACTIVE:
             redirect.transition_to(RedirectStatus.ACTIVE)
             await self._repo.update(redirect)
+
+    async def rename(self, redirect_id: int, alias: str) -> RedirectView:
+        alias = normalize_alias(alias)
+        async with self.lock:
+            redirect = await self._repo.get(redirect_id)
+            if redirect is None:
+                raise RedirectNotFound(f"La redirección #{redirect_id} no existe")
+            if redirect.alias != alias:
+                redirect.alias = alias
+                redirect.updated_at = utcnow()
+                await self._repo.update(redirect)
+        return self._view(redirect)
 
     async def list(self) -> list[RedirectView]:
         return [self._view(r) for r in await self._repo.list()]

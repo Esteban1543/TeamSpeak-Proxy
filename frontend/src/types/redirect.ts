@@ -2,6 +2,7 @@ export type RedirectStatus = 'pending' | 'active' | 'error' | 'stopped';
 
 export interface Redirect {
   id: number;
+  alias: string;
   target: string;
   is_domain: boolean;
   resolved_ip: string;

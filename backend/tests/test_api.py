@@ -68,7 +68,7 @@ async def test_redirect_lifecycle(settings):
     async with LifespanClient(app) as client:
         await login(client)
 
-        r = await client.post("/api/redirects", json={"target": "ts.ejemplo.com"})
+        r = await client.post("/api/redirects", json={"target": "ts.ejemplo.com", "alias": "Prueba"})
         assert r.status_code == 201, r.text
         body = r.json()
         assert body["port"] == 41000
@@ -77,24 +77,24 @@ async def test_redirect_lifecycle(settings):
         assert body["status"] == "active"
         assert engine.is_running(41000)
 
-        assert (await client.post("/api/redirects", json={"target": "1.2.3.4"})).json()["resolved_port"] == 9987
-        assert (await client.post("/api/redirects", json={"target": "1.2.3.4:9988"})).json()["port"] == 41002
+        assert (await client.post("/api/redirects", json={"target": "1.2.3.4", "alias": "Prueba"})).json()["resolved_port"] == 9987
+        assert (await client.post("/api/redirects", json={"target": "1.2.3.4:9988", "alias": "Prueba"})).json()["port"] == 41002
 
-        full = await client.post("/api/redirects", json={"target": "1.2.3.5"})
+        full = await client.post("/api/redirects", json={"target": "1.2.3.5", "alias": "Prueba"})
         assert full.status_code == 409
         assert "No quedan puertos" in full.json()["detail"]
 
         usage = (await client.get("/api/ports/usage")).json()
         assert usage == {"public_host": "203.0.113.10", "used": 3, "total": 3, "free": 0, "range_start": 41000, "range_end": 41002}
 
-        assert (await client.post("/api/redirects", json={"target": "noexiste.com"})).status_code == 422
-        assert (await client.post("/api/redirects", json={"target": "a b"})).status_code == 400
+        assert (await client.post("/api/redirects", json={"target": "noexiste.com", "alias": "Prueba"})).status_code == 422
+        assert (await client.post("/api/redirects", json={"target": "a b", "alias": "Prueba"})).status_code == 400
 
         assert (await client.delete(f"/api/redirects/{body['id']}")).status_code == 204
         assert not engine.is_running(41000)
         assert (await client.delete(f"/api/redirects/{body['id']}")).status_code == 404
 
-        again = await client.post("/api/redirects", json={"target": "1.2.3.6"})
+        again = await client.post("/api/redirects", json={"target": "1.2.3.6", "alias": "Prueba"})
         assert again.json()["port"] == 41000
         assert len((await client.get("/api/redirects")).json()) == 3
 
@@ -104,7 +104,7 @@ async def test_concurrent_creation_gets_unique_ports(settings):
     async with LifespanClient(app) as client:
         await login(client)
         results = await asyncio.gather(
-            *(client.post("/api/redirects", json={"target": f"10.0.0.{i}"}) for i in range(1, 6))
+            *(client.post("/api/redirects", json={"target": f"10.0.0.{i}", "alias": f"Prueba {i}"}) for i in range(1, 6))
         )
         ok = [r.json()["port"] for r in results if r.status_code == 201]
         assert sorted(ok) == [41000, 41001, 41002]
@@ -116,8 +116,8 @@ async def test_redirects_restored_after_restart(tmp_path):
     app, engine = build_app(settings)
     async with LifespanClient(app) as client:
         await login(client)
-        await client.post("/api/redirects", json={"target": "ts.ejemplo.com"})
-        await client.post("/api/redirects", json={"target": "1.2.3.4"})
+        await client.post("/api/redirects", json={"target": "ts.ejemplo.com", "alias": "Prueba"})
+        await client.post("/api/redirects", json={"target": "1.2.3.4", "alias": "Prueba"})
     assert not engine.is_running(41000)
 
     # "Reinicio": nueva app sobre la misma BD; el reconciliador relanza los proxies.
@@ -145,3 +145,65 @@ def test_settings_validation(tmp_path):
         make_settings(tmp_path, port_range_start=10100, port_range_end=10000)
     with pytest.raises(Exception, match="hash_password"):
         make_settings(tmp_path, admin_password_hash="")
+
+
+async def test_alias_create_and_edit(settings):
+    app, _ = build_app(settings)
+    async with LifespanClient(app) as client:
+        await login(client)
+
+        missing = await client.post("/api/redirects", json={"target": "1.2.3.4"})
+        assert missing.status_code == 422  # el alias es obligatorio
+        blank = await client.post("/api/redirects", json={"target": "1.2.3.4", "alias": "   "})
+        assert blank.status_code == 400
+        assert "alias" in blank.json()["detail"]
+        too_long = await client.post("/api/redirects", json={"target": "1.2.3.4", "alias": "x" * 61})
+        assert too_long.status_code == 400
+        # Ningún intento fallido consumió puerto.
+        assert (await client.get("/api/ports/usage")).json()["used"] == 0
+
+        r = await client.post("/api/redirects", json={"target": "1.2.3.4", "alias": "  Clan   Paletas "})
+        assert r.status_code == 201
+        created = r.json()
+        assert created["alias"] == "Clan Paletas"
+
+        upd = await client.patch(f"/api/redirects/{created['id']}", json={"alias": "Server Medellín"})
+        assert upd.status_code == 200
+        assert upd.json()["alias"] == "Server Medellín"
+        assert upd.json()["port"] == created["port"]
+        assert (await client.get("/api/redirects")).json()[0]["alias"] == "Server Medellín"
+
+        assert (await client.patch(f"/api/redirects/{created['id']}", json={"alias": ""})).status_code == 400
+        assert (await client.patch("/api/redirects/999", json={"alias": "x"})).status_code == 404
+        client.cookies.clear()
+        assert (await client.patch(f"/api/redirects/{created['id']}", json={"alias": "x"})).status_code == 401
+
+
+async def test_migration_adds_alias_to_old_database(tmp_path):
+    """Una BD creada antes de existir el alias se migra al arrancar y conserva sus datos."""
+    import sqlite3
+
+    settings = make_settings(tmp_path)
+    old = sqlite3.connect(settings.database_path)
+    old.execute(
+        "CREATE TABLE redirects (id INTEGER PRIMARY KEY AUTOINCREMENT, target_raw TEXT NOT NULL, "
+        "target_host TEXT NOT NULL, target_port INTEGER, is_domain INTEGER NOT NULL, resolved_ip TEXT NOT NULL, "
+        "resolved_port INTEGER NOT NULL, port INTEGER NOT NULL UNIQUE, status TEXT NOT NULL, error TEXT, "
+        "created_at TEXT NOT NULL, updated_at TEXT NOT NULL, resolved_at TEXT)"
+    )
+    old.execute(
+        "INSERT INTO redirects (target_raw, target_host, target_port, is_domain, resolved_ip, resolved_port, port, "
+        "status, created_at, updated_at) VALUES ('1.2.3.4', '1.2.3.4', NULL, 0, '1.2.3.4', 9987, 41000, 'active', "
+        "'2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00')"
+    )
+    old.commit()
+    old.close()
+
+    app, engine = build_app(settings)
+    async with LifespanClient(app) as client:
+        await login(client)
+        items = (await client.get("/api/redirects")).json()
+        assert items[0]["alias"] == "" and items[0]["target"] == "1.2.3.4"
+        assert engine.is_running(41000)
+        upd = await client.patch(f"/api/redirects/{items[0]['id']}", json={"alias": "Antigua"})
+        assert upd.json()["alias"] == "Antigua"

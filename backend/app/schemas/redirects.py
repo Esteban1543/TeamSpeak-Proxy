@@ -11,10 +11,17 @@ from app.services.redirect_service import RedirectView
 
 class RedirectCreate(BaseModel):
     target: str = Field(min_length=1, max_length=260, examples=["ts.ejemplo.com", "1.2.3.4:9987"])
+    # Longitud y contenido se validan en el dominio (normalize_alias), con mensajes claros.
+    alias: str = Field(max_length=200, examples=["Clan Paletas"])
+
+
+class RedirectUpdate(BaseModel):
+    alias: str = Field(max_length=200, examples=["Server Medellín"])
 
 
 class RedirectOut(BaseModel):
     id: int
+    alias: str
     target: str
     is_domain: bool
     resolved_ip: str
@@ -35,6 +42,7 @@ class RedirectOut(BaseModel):
         r, s = view.redirect, view.stats
         return cls(
             id=r.id,  # type: ignore[arg-type]
+            alias=r.alias,
             target=r.target_raw,
             is_domain=r.is_domain,
             resolved_ip=r.resolved_ip,

@@ -150,7 +150,8 @@ privadas, así que el bloqueo de intentos de login usa la IP real del visitante.
 ## Uso del panel
 
 1. Inicia sesión con `ADMIN_USER` y la contraseña elegida.
-2. Escribe el destino en el formulario y pulsa **Crear redirección**:
+2. Escribe un **alias** para identificarla (p. ej. `Clan Paletas`, máx. 60 caracteres) y el
+   destino, y pulsa **Crear redirección**:
    - `ts.ejemplo.com` → se consulta el SRV `_ts3._udp.ts.ejemplo.com`; si no existe, A/AAAA
      con el puerto 9987.
    - `ts.ejemplo.com:9988` → A/AAAA con ese puerto (sin SRV).
@@ -160,7 +161,9 @@ privadas, así que el bloqueo de intentos de login usa la IP real del visitante.
    copiarla y compártela con los usuarios: es lo que deben escribir en TeamSpeak 3.
 4. El indicador superior muestra los puertos usados (p. ej. `23 / 100`). Cuando se agota el
    rango no se pueden crear más redirecciones hasta eliminar alguna.
-5. **Eliminar** detiene el proxy y libera el puerto inmediatamente.
+5. Para cambiar el alias, pulsa ✎ junto a él en la tabla; **Enter** o ✓ guardan, **Esc** o ✕
+   cancelan. El puerto y la dirección pública no cambian.
+6. **Eliminar** detiene el proxy y libera el puerto inmediatamente.
 
 Estados de una redirección:
 

@@ -5,13 +5,23 @@ import Input from '../ui/Input.astro';
 
 <section class="panel p-6">
   <h2 class="label"><span class="text-accent">+</span> Nueva redirección</h2>
-  <form id="redirect-form" class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-start" novalidate>
+  <form id="redirect-form" class="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start" novalidate>
+    <Input
+      id="redirect-alias"
+      name="alias"
+      label="Alias"
+      placeholder="Clan Paletas"
+      hint="Para identificarla en la tabla"
+      autocomplete="off"
+      required
+      maxlength={60}
+      class="sm:w-52"
+    />
     <Input
       id="redirect-target"
       name="target"
       label="Servidor TeamSpeak 3"
-      hideLabel
-      placeholder="ts.ejemplo.com · 1.2.3.4 · 1.2.3.4:9987"
+      placeholder="ts.ejemplo.com · 1.2.3.4:9987"
       hint="Sin puerto → registro SRV o 9987"
       autocomplete="off"
       spellcheck="false"
@@ -19,11 +29,13 @@ import Input from '../ui/Input.astro';
       maxlength={260}
       class="flex-1"
     />
-    <Button id="redirect-submit" type="submit" class="sm:min-w-44">Crear redirección</Button>
+    <Button id="redirect-submit" type="submit" class="sm:mt-6 sm:min-w-44">Crear redirección</Button>
   </form>
   <p id="redirect-form-error" class="mt-4 font-mono text-xs text-bad" role="alert" hidden></p>
   <div id="redirect-created" class="mt-6 border-l-2 border-ok pl-4" hidden>
-    <p class="label">Conectar en TeamSpeak a</p>
+    <p class="label">
+      <span id="redirect-created-alias" class="text-ink"></span> · conectar en TeamSpeak a
+    </p>
     <p class="mt-1 font-mono text-2xl text-ok [text-shadow:0_0_18px_#34f5a466]" id="redirect-created-address"></p>
   </div>
 </section>
@@ -32,10 +44,12 @@ import Input from '../ui/Input.astro';
   import { $portUsage, addRedirect, errorMessage, toast } from '../../lib/store';
 
   const form = document.getElementById('redirect-form') as HTMLFormElement;
-  const input = document.getElementById('redirect-target') as HTMLInputElement;
+  const aliasInput = document.getElementById('redirect-alias') as HTMLInputElement;
+  const targetInput = document.getElementById('redirect-target') as HTMLInputElement;
   const submit = document.getElementById('redirect-submit') as HTMLButtonElement;
   const errorBox = document.getElementById('redirect-form-error')!;
   const created = document.getElementById('redirect-created')!;
+  const createdAlias = document.getElementById('redirect-created-alias')!;
   const createdAddress = document.getElementById('redirect-created-address')!;
 
   let busy = false;
@@ -43,14 +57,16 @@ import Input from '../ui/Input.astro';
 
   function syncDisabled(): void {
     submit.disabled = busy || full;
-    input.disabled = busy;
+    aliasInput.disabled = busy;
+    targetInput.disabled = busy;
     submit.textContent = busy ? 'Creando_' : 'Crear redirección';
   }
 
-  function showError(message: string | null): void {
+  function showError(message: string | null, field: HTMLInputElement | null = null): void {
     errorBox.textContent = message ?? '';
     errorBox.hidden = !message;
-    input.setAttribute('aria-invalid', message ? 'true' : 'false');
+    aliasInput.setAttribute('aria-invalid', String(field === aliasInput));
+    targetInput.setAttribute('aria-invalid', String(field === targetInput));
   }
 
   $portUsage.subscribe((usage) => {
@@ -65,10 +81,16 @@ import Input from '../ui/Input.astro';
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const target = input.value.trim();
+    const alias = aliasInput.value.trim();
+    const target = targetInput.value.trim();
+    if (!alias) {
+      showError('Escribe un alias para identificar la redirección.', aliasInput);
+      aliasInput.focus();
+      return;
+    }
     if (!target) {
-      showError('Escribe una IP o un dominio.');
-      input.focus();
+      showError('Escribe una IP o un dominio.', targetInput);
+      targetInput.focus();
       return;
     }
     busy = true;
@@ -77,22 +99,25 @@ import Input from '../ui/Input.astro';
     delete errorBox.dataset['reason'];
     created.hidden = true;
     try {
-      const redirect = await addRedirect(target);
-      input.value = '';
+      const redirect = await addRedirect(target, alias);
+      aliasInput.value = '';
+      targetInput.value = '';
+      createdAlias.textContent = redirect.alias;
       createdAddress.textContent = redirect.public_address;
       created.hidden = false;
       if (redirect.status === 'error') {
         toast(`Creada, pero el proxy no arrancó: ${redirect.error ?? 'error desconocido'}`, 'error', 8000);
       } else {
-        toast(`Redirección creada en ${redirect.public_address}`, 'success');
+        toast(`"${redirect.alias}" creada en ${redirect.public_address}`, 'success');
       }
     } catch (err) {
       errorBox.dataset['reason'] = 'request';
-      showError(errorMessage(err));
+      const message = errorMessage(err);
+      showError(message, /alias/i.test(message) ? aliasInput : targetInput);
     } finally {
       busy = false;
       syncDisabled();
-      input.focus();
+      (aliasInput.value ? targetInput : aliasInput).focus();
     }
   });
 </script>

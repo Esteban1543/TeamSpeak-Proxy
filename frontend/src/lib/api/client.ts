@@ -17,7 +17,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;
   /** Si es false, un 401 se devuelve como ApiError en vez de redirigir a /login. */
   redirectOn401?: boolean;

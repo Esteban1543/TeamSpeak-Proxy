@@ -13,6 +13,10 @@ class InvalidTarget(DomainError):
     """El destino introducido no tiene un formato válido."""
 
 
+class InvalidAlias(DomainError):
+    """El alias está vacío o es demasiado largo."""
+
+
 class ResolveError(DomainError):
     """No se pudo resolver el dominio a una IP/puerto."""
 

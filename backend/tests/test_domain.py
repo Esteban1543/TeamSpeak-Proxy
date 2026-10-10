@@ -1,7 +1,7 @@
 import pytest
 
-from app.domain.errors import InvalidTarget, InvalidTransition, PortRangeExhausted
-from app.domain.models import Redirect, RedirectStatus, parse_target
+from app.domain.errors import InvalidAlias, InvalidTarget, InvalidTransition, PortRangeExhausted
+from app.domain.models import Redirect, RedirectStatus, normalize_alias, parse_target
 from app.services.port_allocator import PortAllocator
 
 
@@ -54,3 +54,12 @@ def test_port_allocator():
         alloc.choose({100, 101, 102})
     usage = alloc.usage({100, 101, 5000})
     assert (usage.used, usage.total, usage.free) == (2, 3, 1)
+
+
+def test_normalize_alias():
+    assert normalize_alias("  Clan \t Paletas\n") == "Clan Paletas"
+    assert normalize_alias("Ñandú 🎮") == "Ñandú 🎮"
+    assert normalize_alias("x" * 60) == "x" * 60
+    for bad in ("", "   ", "x" * 61):
+        with pytest.raises(InvalidAlias):
+            normalize_alias(bad)

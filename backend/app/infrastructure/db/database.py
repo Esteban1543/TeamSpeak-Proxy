@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS redirects (
     error         TEXT,
     created_at    TEXT    NOT NULL,
     updated_at    TEXT    NOT NULL,
-    resolved_at   TEXT
+    resolved_at   TEXT,
+    alias         TEXT    NOT NULL DEFAULT ''
 );
 """
 
@@ -46,6 +47,14 @@ class Database:
         await self._conn.execute("PRAGMA journal_mode=WAL")
         await self._conn.execute("PRAGMA busy_timeout=5000")
         await self._conn.executescript(SCHEMA)
+        await self._migrate()
+
+    async def _migrate(self) -> None:
+        """Añade columnas nuevas a bases de datos creadas con versiones anteriores."""
+        async with self.conn.execute("PRAGMA table_info(redirects)") as cur:
+            columns = {row[1] for row in await cur.fetchall()}
+        if "alias" not in columns:
+            await self.conn.execute("ALTER TABLE redirects ADD COLUMN alias TEXT NOT NULL DEFAULT ''")
 
     async def close(self) -> None:
         if self._conn is not None:

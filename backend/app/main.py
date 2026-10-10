@@ -15,6 +15,7 @@ from app.config import Settings, get_settings
 from app.domain.errors import (
     DomainError,
     EngineError,
+    InvalidAlias,
     InvalidTarget,
     InvalidTransition,
     PortRangeExhausted,
@@ -35,6 +36,7 @@ log = logging.getLogger("app")
 
 _ERROR_STATUS: dict[type[DomainError], int] = {
     InvalidTarget: status.HTTP_400_BAD_REQUEST,
+    InvalidAlias: status.HTTP_400_BAD_REQUEST,
     ResolveError: status.HTTP_422_UNPROCESSABLE_ENTITY,
     PortRangeExhausted: status.HTTP_409_CONFLICT,
     RedirectNotFound: status.HTTP_404_NOT_FOUND,

@@ -8,9 +8,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from app.domain.errors import InvalidTarget, InvalidTransition
+from app.domain.errors import InvalidAlias, InvalidTarget, InvalidTransition
 
 DEFAULT_TS3_PORT = 9987
+MAX_ALIAS_LENGTH = 60
 
 
 class RedirectStatus(StrEnum):
@@ -52,6 +53,7 @@ class Redirect:
     resolved_ip: str
     resolved_port: int
     port: int
+    alias: str = ""
     status: RedirectStatus = RedirectStatus.PENDING
     error: str | None = None
     id: int | None = None
@@ -65,6 +67,16 @@ class Redirect:
         self.status = new
         self.error = error if new == RedirectStatus.ERROR else None
         self.updated_at = utcnow()
+
+
+def normalize_alias(raw: str) -> str:
+    """Alias legible para identificar la redirección: sin espacios sobrantes, 1-60 caracteres."""
+    alias = " ".join(raw.split())
+    if not alias:
+        raise InvalidAlias("Escribe un alias para identificar la redirección")
+    if len(alias) > MAX_ALIAS_LENGTH:
+        raise InvalidAlias(f"El alias no puede superar {MAX_ALIAS_LENGTH} caracteres")
+    return alias
 
 
 _HOSTNAME_LABEL = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
