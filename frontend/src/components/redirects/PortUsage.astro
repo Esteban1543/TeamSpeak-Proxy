@@ -1,4 +1,8 @@
 <section class="panel flex flex-col justify-between gap-6 p-6" aria-labelledby="port-usage-title">
+  <div>
+    <p class="label">IP de la VPS</p>
+    <p id="vps-host" class="mt-1 font-mono text-lg break-all text-accent [text-shadow:0_0_14px_#22e1ff55]">—</p>
+  </div>
   <div class="flex items-baseline justify-between gap-2">
     <h2 id="port-usage-title" class="label">Puertos</h2>
     <p class="font-mono text-[11px] text-faint"><span id="port-range">—</span></p>
@@ -23,6 +27,7 @@
 <script>
   import { $portUsage } from '../../lib/store';
 
+  const vpsHost = document.getElementById('vps-host')!;
   const used = document.getElementById('port-used')!;
   const total = document.getElementById('port-total')!;
   const range = document.getElementById('port-range')!;
@@ -31,6 +36,7 @@
 
   $portUsage.subscribe((usage) => {
     if (!usage) return;
+    vpsHost.textContent = usage.public_host;
     used.textContent = String(usage.used);
     total.textContent = String(usage.total);
     range.textContent = `${usage.range_start}–${usage.range_end}`;

@@ -24,7 +24,7 @@
 
 	# API: el backend solo escucha en 127.0.0.1 (network_mode: host).
 	handle /api/* {
-		reverse_proxy 127.0.0.1:8000
+		reverse_proxy 127.0.0.1:{$API_PORT:8000}
 	}
 
 	# Frontend estático compilado por Astro.

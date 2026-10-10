@@ -53,6 +53,7 @@ class RedirectOut(BaseModel):
 
 
 class PortUsageOut(BaseModel):
+    public_host: str
     used: int
     total: int
     free: int
@@ -60,8 +61,15 @@ class PortUsageOut(BaseModel):
     range_end: int
 
     @classmethod
-    def from_usage(cls, u: PortUsage) -> PortUsageOut:
-        return cls(used=u.used, total=u.total, free=u.free, range_start=u.range_start, range_end=u.range_end)
+    def from_usage(cls, u: PortUsage, public_host: str) -> PortUsageOut:
+        return cls(
+            public_host=public_host,
+            used=u.used,
+            total=u.total,
+            free=u.free,
+            range_start=u.range_start,
+            range_end=u.range_end,
+        )
 
 
 def _join(host: str, port: int) -> str:

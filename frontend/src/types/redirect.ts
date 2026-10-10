@@ -19,6 +19,7 @@ export interface Redirect {
 }
 
 export interface PortUsage {
+  public_host: string;
   used: number;
   total: number;
   free: number;

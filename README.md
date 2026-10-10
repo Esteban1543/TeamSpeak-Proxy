@@ -55,7 +55,8 @@ cp frontend/.env.example frontend/.env
 ```
 
 - **`.env`** (raíz): `DOMAIN=panel.tudominio.com`. Déjalo vacío (`DOMAIN=`) si vas a
-  entrar por `http://IP_DE_LA_VPS`.
+  entrar por `http://IP_DE_LA_VPS`. `API_PORT` es el puerto local de la API (8000 por
+  defecto); se define aquí porque lo usan tanto el backend como Caddy.
 - **`backend/.env`**: como mínimo `PUBLIC_HOST` (la IP pública de la VPS),
   `PORT_RANGE_START`/`PORT_RANGE_END`, `ADMIN_PASSWORD_HASH` y `SESSION_SECRET`
   (siguiente paso).
@@ -189,10 +190,10 @@ Estados de una redirección:
 | Variable                | Por defecto       | Descripción                                               |
 |-------------------------|-------------------|-----------------------------------------------------------|
 | `API_HOST`              | `127.0.0.1`       | Interfaz de la API (no cambiar con `network_mode: host`). |
-| `API_PORT`              | `8000`            | Puerto de la API (no puede estar dentro del rango).       |
+| `API_PORT`              | `8000`            | Puerto de la API (no puede estar dentro del rango). Va en el `.env` de la **raíz**. |
 | `DATABASE_PATH`         | `/data/proxy.db`  | Ruta de SQLite dentro del contenedor.                     |
 | `PORT_RANGE_START/END`  | `10000`/`10100`   | Rango de puertos UDP (incluidos). `END` > `START`.        |
-| `PUBLIC_HOST`           | —                 | IP o dominio público mostrado a los usuarios.             |
+| `PUBLIC_HOST`           | —                 | IP o dominio de la VPS que muestra el panel. Al cambiarlo basta con `docker compose restart backend`. |
 | `ADMIN_USER`            | `admin`           | Usuario administrador.                                    |
 | `ADMIN_PASSWORD_HASH`   | —                 | Hash bcrypt (`python -m app.hash_password`).              |
 | `SESSION_SECRET`        | —                 | Clave para firmar la cookie (≥ 32 caracteres).            |

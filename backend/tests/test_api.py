@@ -85,7 +85,7 @@ async def test_redirect_lifecycle(settings):
         assert "No quedan puertos" in full.json()["detail"]
 
         usage = (await client.get("/api/ports/usage")).json()
-        assert usage == {"used": 3, "total": 3, "free": 0, "range_start": 41000, "range_end": 41002}
+        assert usage == {"public_host": "203.0.113.10", "used": 3, "total": 3, "free": 0, "range_start": 41000, "range_end": 41002}
 
         assert (await client.post("/api/redirects", json={"target": "noexiste.com"})).status_code == 422
         assert (await client.post("/api/redirects", json={"target": "a b"})).status_code == 400

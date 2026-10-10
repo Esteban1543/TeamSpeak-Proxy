@@ -25,5 +25,5 @@ async def delete_redirect(redirect_id: int, _: CurrentUser, service: RedirectSer
 
 
 @router.get("/ports/usage", response_model=PortUsageOut)
-async def port_usage(_: CurrentUser, service: RedirectServiceDep) -> PortUsageOut:
-    return PortUsageOut.from_usage(await service.port_usage())
+async def port_usage(_: CurrentUser, service: RedirectServiceDep, settings: SettingsDep) -> PortUsageOut:
+    return PortUsageOut.from_usage(await service.port_usage(), settings.public_host)
