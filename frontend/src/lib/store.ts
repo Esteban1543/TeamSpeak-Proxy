@@ -17,11 +17,12 @@ export interface Toast {
 export const $redirects = atom<Redirect[]>([]);
 export const $portUsage = atom<PortUsage | null>(null);
 export const $loaded = atom(false);
+export const $lastUpdated = atom<Date | null>(null);
 export const $toasts = atom<Toast[]>([]);
 
-const POLL_MS = 15_000;
+const POLL_MS = 5_000;
 let toastSeq = 0;
-let pollTimer: ReturnType<typeof setInterval> | undefined;
+let polling = false;
 
 export function toast(message: string, kind: ToastKind = 'info', ttl = 5000): void {
   const item: Toast = { id: ++toastSeq, kind, message };
@@ -46,6 +47,7 @@ export async function refresh(): Promise<void> {
   $redirects.set(redirects);
   $portUsage.set(usage);
   $loaded.set(true);
+  $lastUpdated.set(new Date());
 }
 
 export async function addRedirect(target: string): Promise<Redirect> {
@@ -66,12 +68,34 @@ export async function removeRedirect(id: number): Promise<void> {
   await refreshUsage();
 }
 
-/** Refresco periódico para estados, clientes y tráfico. */
+/**
+ * Refresco periódico de estados, clientes y tráfico. Se pausa con la pestaña
+ * oculta y refresca al instante al volver a ella. Nunca solapa peticiones.
+ */
 export function startPolling(): void {
-  if (pollTimer) return;
-  pollTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') {
-      refresh().catch(() => {});
+  if (polling) return;
+  polling = true;
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let inFlight = false;
+
+  const tick = async (): Promise<void> => {
+    clearTimeout(timer);
+    if (document.visibilityState !== 'visible') return; // se reanuda en visibilitychange
+    if (!inFlight) {
+      inFlight = true;
+      try {
+        await refresh();
+      } catch {
+        /* error de red puntual: se reintenta en el siguiente ciclo */
+      } finally {
+        inFlight = false;
+      }
     }
-  }, POLL_MS);
+    timer = setTimeout(tick, POLL_MS);
+  };
+
+  document.addEventListener('visibilitychange', () => void tick());
+  window.addEventListener('focus', () => void tick());
+  timer = setTimeout(tick, POLL_MS);
 }

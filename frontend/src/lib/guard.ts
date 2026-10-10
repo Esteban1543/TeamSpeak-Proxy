@@ -6,8 +6,12 @@
 import { me } from './api/auth';
 import type { User } from '../types/redirect';
 
-export async function requireSession(): Promise<User> {
-  return me();
+let session: Promise<User> | undefined;
+
+/** Comprueba la sesión una sola vez; todas las llamadas comparten el resultado. */
+export function requireSession(): Promise<User> {
+  session ??= me();
+  return session;
 }
 
 /** En /login: si ya hay sesión, ir directamente al panel. */

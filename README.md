@@ -175,7 +175,9 @@ Estados de una redirección:
 
 - **Proxy UDP (asyncio + uvloop)**: escucha en el puerto asignado y crea un socket de salida
   por cada cliente (IP:puerto de origen), así las respuestas vuelven al cliente correcto.
-  Las sesiones sin tráfico durante `CLIENT_IDLE_TIMEOUT` segundos (120 por defecto) se cierran.
+  Las sesiones sin tráfico durante `CLIENT_IDLE_TIMEOUT` segundos (30 por defecto; TS3 envía un
+  ping por segundo) se cierran, así que el contador de clientes baja como mucho ~35 s después
+  de que alguien se desconecte. El panel refresca estados, clientes y tráfico cada 5 s.
 - **Reconciliador**: al arrancar levanta todas las redirecciones guardadas; cada 30 s relanza
   proxies caídos y cada `DNS_REFRESH_MINUTES` vuelve a resolver los dominios. Si la IP cambia,
   el proxy pasa a usar la nueva. Si la resolución falla, se mantiene la última IP conocida.
@@ -201,7 +203,7 @@ Estados de una redirección:
 | `SESSION_COOKIE_SECURE` | `true`            | `false` solo si se accede por HTTP.                       |
 | `DNS_REFRESH_MINUTES`   | `10`              | Intervalo de re-resolución de dominios.                   |
 | `FORWARDING_ENGINE`     | `asyncio`         | `nftables` está reservado (no implementado).              |
-| `CLIENT_IDLE_TIMEOUT`   | `120`             | Segundos de inactividad antes de cerrar la sesión de un cliente. |
+| `CLIENT_IDLE_TIMEOUT`   | `30`              | Segundos de inactividad antes de cerrar la sesión de un cliente. |
 
 Si alguna variable es incorrecta, el backend no arranca y muestra qué falla
 (`docker compose logs backend`).

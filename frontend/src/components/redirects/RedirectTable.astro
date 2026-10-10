@@ -76,7 +76,7 @@ import Button from '../ui/Button.astro';
 
 <script>
   import { formatBytes, formatDate } from '../../lib/format';
-  import { $loaded, $redirects, errorMessage, removeRedirect, toast } from '../../lib/store';
+  import { $lastUpdated, $loaded, $redirects, errorMessage, removeRedirect, toast } from '../../lib/store';
   import type { Redirect } from '../../types/redirect';
 
   const STATUS_LABELS: Record<Redirect['status'], string> = {
@@ -133,7 +133,9 @@ import Button from '../ui/Button.astro';
     const loaded = $loaded.get();
     loading.hidden = loaded;
     empty.hidden = !loaded || redirects.length > 0;
-    count.textContent = loaded ? `${redirects.length} en total` : '';
+    const updated = $lastUpdated.get();
+    const time = updated ? ` · act. ${updated.toLocaleTimeString('es-ES')}` : '';
+    count.textContent = loaded ? `${redirects.length} en total${time}` : '';
     tbody.replaceChildren(...redirects.map(renderRow));
   }
 

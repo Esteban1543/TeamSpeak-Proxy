@@ -31,8 +31,9 @@ class Settings(BaseSettings):
     dns_refresh_minutes: int = Field(default=10, ge=1)
     forwarding_engine: Literal["asyncio", "nftables"] = "asyncio"
 
-    # Tiempo tras el cual se cierra la sesión UDP de un cliente sin tráfico.
-    client_idle_timeout: int = Field(default=120, ge=10)
+    # Tiempo tras el cual se cierra la sesión UDP de un cliente sin tráfico
+    # (los clientes TS3 envían un ping por segundo mientras están conectados).
+    client_idle_timeout: int = Field(default=30, ge=10)
 
     @field_validator("admin_password_hash")
     @classmethod

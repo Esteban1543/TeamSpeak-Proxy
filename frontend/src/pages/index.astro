@@ -14,15 +14,13 @@ import RedirectTable from '../components/redirects/RedirectTable.astro';
 </AdminLayout>
 
 <script>
+  import { requireSession } from '../lib/guard';
   import { errorMessage, refresh, startPolling, toast } from '../lib/store';
 
-  document.addEventListener(
-    'session:ready',
-    () => {
-      refresh()
-        .catch((err) => toast(errorMessage(err), 'error'))
-        .finally(startPolling);
-    },
-    { once: true },
-  );
+  requireSession()
+    .then(() => refresh().catch((err) => toast(errorMessage(err), 'error')))
+    .then(startPolling)
+    .catch(() => {
+      /* sin sesión: client.ts ya redirige a /login */
+    });
 </script>

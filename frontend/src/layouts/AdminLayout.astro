@@ -50,7 +50,6 @@ const { title } = Astro.props;
       document.getElementById('current-user')!.textContent = user.username;
       loading.hidden = true;
       shell.hidden = false;
-      document.dispatchEvent(new CustomEvent('session:ready'));
     })
     .catch((err) => {
       loading.textContent = errorMessage(err);

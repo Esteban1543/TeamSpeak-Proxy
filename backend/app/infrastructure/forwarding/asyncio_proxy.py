@@ -20,7 +20,9 @@ log = logging.getLogger(__name__)
 
 Addr = tuple[str, int]
 
-SWEEP_INTERVAL = 30.0
+# Los clientes TS3 envían un ping por segundo; una sesión sin tráfico durante
+# idle_timeout se da por cerrada. El barrido corto mantiene el contador al día.
+SWEEP_INTERVAL = 5.0
 MAX_PENDING_PACKETS = 64
 MAX_SESSIONS_PER_PROXY = 1024
 
@@ -192,7 +194,7 @@ class UdpProxy:
 class AsyncioForwardingEngine:
     """Implementación de ForwardingEngine. Registry: puerto -> proxy activo."""
 
-    def __init__(self, idle_timeout: float = 120.0, bind_host: str = "0.0.0.0") -> None:
+    def __init__(self, idle_timeout: float = 30.0, bind_host: str = "0.0.0.0") -> None:
         self._idle_timeout = idle_timeout
         self._bind_host = bind_host
         self._proxies: dict[int, UdpProxy] = {}

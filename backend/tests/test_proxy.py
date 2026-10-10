@@ -92,3 +92,30 @@ async def test_port_in_use_raises_engine_error():
         with pytest.raises(EngineError):
             await engine.start(Redirect("x", "x", None, False, "127.0.0.1", 9, port, id=1))
         assert not engine.is_running(port)
+
+
+async def test_idle_sessions_are_swept(monkeypatch):
+    from app.infrastructure.forwarding import asyncio_proxy
+
+    monkeypatch.setattr(asyncio_proxy, "SWEEP_INTERVAL", 0.1)
+    loop = asyncio.get_running_loop()
+    echo_tr, _ = await loop.create_datagram_endpoint(Echo, local_addr=("127.0.0.1", 0))
+    engine = AsyncioForwardingEngine(idle_timeout=0.3, bind_host="127.0.0.1")
+    port = free_udp_port()
+    redirect = Redirect("x", "127.0.0.1", None, False, "127.0.0.1", echo_tr.get_extra_info("sockname")[1], port, id=1)
+    await engine.start(redirect)
+
+    tr, c = await loop.create_datagram_endpoint(Client, remote_addr=("127.0.0.1", port))
+    tr.sendto(b"ping")
+    await asyncio.wait_for(c.queue.get(), 2)
+    assert engine.stats(port).clients == 1
+
+    # Sin tráfico más allá del timeout, la sesión se cierra y el contador baja.
+    await asyncio.sleep(0.6)
+    assert engine.stats(port).clients == 0
+    # Las estadísticas de tráfico acumuladas se conservan.
+    assert engine.stats(port).bytes_in == 4
+
+    await engine.stop(redirect)
+    tr.close()
+    echo_tr.close()
