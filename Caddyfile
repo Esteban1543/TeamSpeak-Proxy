@@ -1,5 +1,15 @@
 # Sin DOMAIN: sirve por HTTP en el puerto 80 (acceso por IP).
 # Con DOMAIN=panel.tudominio.com: HTTPS automático con Let's Encrypt.
+# Con DOMAIN=:16017: HTTP en ese puerto, para ir detrás de otro proxy inverso
+# (nginx, Traefik...) que termina el HTTPS.
+{
+	servers {
+		# Confía en X-Forwarded-For de proxies en redes privadas (p. ej. nginx en
+		# Docker), para que la API vea la IP real del visitante.
+		trusted_proxies static private_ranges
+	}
+}
+
 {$DOMAIN::80} {
 	encode zstd gzip
 

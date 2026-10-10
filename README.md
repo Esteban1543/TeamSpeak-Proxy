@@ -132,6 +132,20 @@ SESSION_COOKIE_SECURE=false
 y reinicia con `docker compose up -d`. Se recomienda usar un dominio con HTTPS: sin él, la
 contraseña y la cookie viajan sin cifrar.
 
+#### Detrás de otro proxy inverso (nginx, Traefik…)
+
+Si en el servidor ya hay un proxy inverso ocupando 80/443 y gestionando los certificados,
+haz que Caddy escuche solo en un puerto local poniendo en el `.env` de la raíz:
+
+```env
+DOMAIN=:16017
+```
+
+y apunta tu proxy a ese puerto (con nginx: `proxy_pass http://172.17.0.1:16017;` si nginx corre
+en Docker, o `http://127.0.0.1:16017;` si corre en el host). Mantén `SESSION_COOKIE_SECURE=true`
+siempre que el proxy sirva el panel por HTTPS. Caddy confía en `X-Forwarded-For` de redes
+privadas, así que el bloqueo de intentos de login usa la IP real del visitante.
+
 ## Uso del panel
 
 1. Inicia sesión con `ADMIN_USER` y la contraseña elegida.
