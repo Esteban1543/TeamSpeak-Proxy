@@ -1,6 +1,8 @@
 ---
 import Badge from '../ui/Badge.astro';
 import Button from '../ui/Button.astro';
+import Input from '../ui/Input.astro';
+import Modal from '../ui/Modal.astro';
 ---
 
 <section class="panel">
@@ -9,18 +11,19 @@ import Button from '../ui/Button.astro';
     <span id="redirect-count" class="font-mono text-[11px] text-faint"></span>
   </div>
 
-  <div class="overflow-x-auto">
-    <table class="w-full min-w-[66rem] text-left text-sm">
+  <!-- Todas las celdas en una línea: si no cabe, la tabla se desplaza en horizontal.
+       `relative` hace que los elementos sr-only (absolutos) queden dentro del scroll. -->
+  <div class="relative overflow-x-auto">
+    <table class="w-full text-left text-sm whitespace-nowrap">
       <thead>
         <tr class="border-y border-line">
-          <th scope="col" class="label w-64 px-6 py-3 font-normal text-faint">Alias</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Destino</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Resuelto</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Dirección pública</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Estado</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Tráfico</th>
-          <th scope="col" class="label px-6 py-3 font-normal text-faint">Creada</th>
-          <th scope="col" class="px-6 py-3"><span class="sr-only">Acciones</span></th>
+          <th scope="col" class="label py-3 pr-4 pl-6 font-normal text-faint">Alias</th>
+          <th scope="col" class="label px-4 py-3 font-normal text-faint">Destino</th>
+          <th scope="col" class="label px-4 py-3 font-normal text-faint">Dirección pública</th>
+          <th scope="col" class="label px-4 py-3 font-normal text-faint">Estado</th>
+          <th scope="col" class="label px-4 py-3 font-normal text-faint">Tráfico</th>
+          <th scope="col" class="label px-4 py-3 font-normal text-faint">Creada</th>
+          <th scope="col" class="py-3 pr-6 pl-4"><span class="sr-only">Acciones</span></th>
         </tr>
       </thead>
       <tbody id="redirect-rows" class="divide-y divide-line"></tbody>
@@ -34,40 +37,25 @@ import Button from '../ui/Button.astro';
 
   <template id="redirect-row-template">
     <tr class="group align-top transition-colors hover:bg-accent/[0.03]">
-      <td class="w-64 px-6 py-4">
-        <div data-alias="view" class="flex items-center gap-2">
-          <span data-field="alias" class="font-medium break-all text-ink"></span>
+      <td class="py-4 pr-4 pl-6">
+        <div class="flex min-w-[8rem] items-center gap-2">
+          <span data-field="alias" class="max-w-[13rem] truncate font-medium text-ink"></span>
           <button
             type="button"
             data-action="edit-alias"
-            class="shrink-0 px-1 text-dim opacity-50 transition group-hover:opacity-100 hover:text-accent focus-visible:opacity-100"
+            class="shrink-0 px-1 text-dim opacity-60 transition group-hover:opacity-100 hover:text-accent focus-visible:opacity-100"
             title="Editar alias"
             aria-label="Editar alias"
           >
             ✎
           </button>
         </div>
-        <form data-alias="edit" class="flex items-center gap-1" novalidate hidden>
-          <input
-            data-field="alias-input"
-            aria-label="Alias"
-            maxlength="60"
-            autocomplete="off"
-            class="w-full min-w-0 flex-1 border-0 border-b border-accent bg-transparent px-0 py-1 text-sm text-ink focus:ring-0 focus:outline-none disabled:opacity-40"
-          />
-          <button type="submit" class="shrink-0 px-1.5 text-ok hover:[text-shadow:0_0_10px_#34f5a4]" title="Guardar" aria-label="Guardar alias">✓</button>
-          <button type="button" data-action="cancel-alias" class="shrink-0 px-1.5 text-faint hover:text-ink" title="Cancelar" aria-label="Cancelar">✕</button>
-        </form>
       </td>
-      <td class="px-6 py-4">
-        <div data-field="target" class="break-all text-ink"></div>
+      <td class="px-4 py-4">
+        <div data-field="target" class="max-w-[12rem] truncate text-ink"></div>
         <div data-field="kind" class="mt-0.5 font-mono text-[10px] tracking-[0.2em] text-faint uppercase"></div>
       </td>
-      <td class="px-6 py-4 font-mono text-xs text-dim">
-        <div data-field="resolved"></div>
-        <div data-field="resolved-at" class="mt-0.5 text-[10px] text-faint"></div>
-      </td>
-      <td class="px-6 py-4">
+      <td class="px-4 py-4">
         <button
           type="button"
           data-action="copy"
@@ -77,16 +65,16 @@ import Button from '../ui/Button.astro';
           <span data-field="public"></span>
         </button>
       </td>
-      <td class="px-6 py-4">
+      <td class="px-4 py-4">
         <Badge />
-        <div data-field="error" class="mt-1 max-w-56 font-mono text-[11px] text-bad/80"></div>
+        <div data-field="error" class="mt-1 max-w-56 truncate font-mono text-[11px] text-bad/80"></div>
       </td>
-      <td class="px-6 py-4 font-mono text-xs whitespace-nowrap text-dim">
+      <td class="px-4 py-4 font-mono text-xs text-dim">
         <div data-field="clients"></div>
         <div data-field="bytes" class="mt-0.5 text-[10px] text-faint"></div>
       </td>
-      <td data-field="created" class="px-6 py-4 font-mono text-xs whitespace-nowrap text-faint"></td>
-      <td class="px-6 py-4 text-right whitespace-nowrap">
+      <td data-field="created" class="px-4 py-4 font-mono text-xs text-faint"></td>
+      <td class="py-4 pr-6 pl-4 text-right">
         <div data-confirm="idle" class="opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
           <Button variant="danger" size="sm" data-action="ask-delete">Eliminar</Button>
         </div>
@@ -99,6 +87,26 @@ import Button from '../ui/Button.astro';
     </tr>
   </template>
 </section>
+
+<Modal id="alias-dialog" title="Editar alias">
+  <p id="alias-dialog-context" class="mt-3 font-mono text-xs break-all text-faint"></p>
+  <form id="alias-form" class="mt-6 space-y-6" novalidate>
+    <Input
+      id="alias-dialog-input"
+      name="alias"
+      label="Alias"
+      hint="Máximo 60 caracteres"
+      autocomplete="off"
+      required
+      maxlength={60}
+    />
+    <p id="alias-dialog-error" class="font-mono text-xs text-bad" role="alert" hidden></p>
+    <div class="flex justify-end gap-3">
+      <Button id="alias-dialog-cancel" variant="ghost">Cancelar</Button>
+      <Button id="alias-dialog-save" type="submit">Guardar</Button>
+    </div>
+  </form>
+</Modal>
 
 <script>
   import { formatBytes, formatDate } from '../../lib/format';
@@ -129,8 +137,6 @@ import Button from '../ui/Button.astro';
   // Estado de la UI que debe sobrevivir a los refrescos periódicos.
   const confirming = new Set<number>();
   const deleting = new Set<number>();
-  // Mientras se edita un alias no se reconstruyen las filas (se perdería lo escrito).
-  let editingId: number | null = null;
 
   function field(row: Element, name: string): HTMLElement {
     return row.querySelector<HTMLElement>(`[data-field="${name}"]`)!;
@@ -139,22 +145,35 @@ import Button from '../ui/Button.astro';
   function renderRow(r: Redirect): HTMLTableRowElement {
     const row = (template.content.firstElementChild as HTMLTableRowElement).cloneNode(true) as HTMLTableRowElement;
     row.dataset['id'] = String(r.id);
+
     const alias = field(row, 'alias');
     alias.textContent = r.alias || 'sin alias';
+    alias.title = r.alias;
     alias.classList.toggle('text-faint', !r.alias);
     alias.classList.toggle('italic', !r.alias);
     alias.classList.toggle('font-normal', !r.alias);
-    row.dataset['alias'] = r.alias;
-    field(row, 'target').textContent = r.target;
-    field(row, 'kind').textContent = r.is_domain ? 'Dominio' : 'IP';
-    field(row, 'resolved').textContent = r.resolved_address;
-    field(row, 'resolved-at').textContent = r.resolved_at ? `Resuelto ${formatDate(r.resolved_at)}` : '';
+
+    const target = field(row, 'target');
+    target.textContent = r.target;
+    target.title = r.target;
+    // Para dominios, la IP a la que resolvió (con la fecha en el tooltip); para IPs sería repetir.
+    const kind = field(row, 'kind');
+    kind.textContent = r.is_domain ? 'Dominio' : 'IP';
+    if (r.is_domain) {
+      const resolved = document.createElement('span');
+      resolved.className = 'tracking-normal text-dim';
+      resolved.textContent = ` → ${r.resolved_address}`;
+      kind.append(resolved);
+    }
+    kind.title = r.resolved_at ? `Resuelto ${formatDate(r.resolved_at)}` : '';
     field(row, 'public').textContent = r.public_address;
 
     const badge = row.querySelector<HTMLElement>('.badge')!;
     badge.dataset['status'] = r.status;
     badge.querySelector('[data-badge-label]')!.textContent = STATUS_LABELS[r.status] ?? r.status;
-    field(row, 'error').textContent = r.error ?? '';
+    const error = field(row, 'error');
+    error.textContent = r.error ?? '';
+    error.title = r.error ?? '';
 
     field(row, 'clients').textContent = `${r.clients} ${r.clients === 1 ? 'cliente' : 'clientes'}`;
     field(row, 'bytes').textContent = `↑ ${formatBytes(r.bytes_in)} · ↓ ${formatBytes(r.bytes_out)}`;
@@ -182,78 +201,93 @@ import Button from '../ui/Button.astro';
     loading.hidden = loaded;
     empty.hidden = !loaded || redirects.length > 0;
     renderCount();
-    if (editingId !== null) return; // se pinta al terminar de editar
+
+    // Repintar sin perder el foco del teclado si estaba en un botón de la tabla.
+    const active = document.activeElement;
+    const focus =
+      active instanceof HTMLElement && tbody.contains(active)
+        ? { id: active.closest('tr')?.dataset['id'], action: active.dataset['action'] }
+        : null;
     tbody.replaceChildren(...redirects.map(renderRow));
-  }
-
-  function rowById(id: number): HTMLTableRowElement | null {
-    return tbody.querySelector<HTMLTableRowElement>(`tr[data-id="${id}"]`);
-  }
-
-  function aliasInput(row: Element): HTMLInputElement {
-    return row.querySelector<HTMLInputElement>('[data-field="alias-input"]')!;
-  }
-
-  function startEdit(row: HTMLTableRowElement, id: number): void {
-    if (editingId !== null && editingId !== id) stopEdit();
-    editingId = id;
-    row.querySelector<HTMLElement>('[data-alias="view"]')!.hidden = true;
-    row.querySelector<HTMLElement>('[data-alias="edit"]')!.hidden = false;
-    const input = aliasInput(row);
-    input.value = row.dataset['alias'] ?? '';
-    input.focus();
-    input.select();
-  }
-
-  function stopEdit(): void {
-    editingId = null;
-    render();
-  }
-
-  async function saveEdit(row: HTMLTableRowElement, id: number): Promise<void> {
-    const input = aliasInput(row);
-    const alias = input.value.trim();
-    if (!alias) {
-      toast('El alias no puede quedar vacío', 'error');
-      input.focus();
-      return;
-    }
-    if (alias === row.dataset['alias']) {
-      stopEdit();
-      return;
-    }
-    const controls = row.querySelectorAll<HTMLInputElement | HTMLButtonElement>('[data-alias="edit"] :is(input, button)');
-    controls.forEach((el) => (el.disabled = true));
-    try {
-      const updated = await renameRedirect(id, alias);
-      toast(`Alias actualizado: ${updated.alias}`, 'success', 2500);
-      stopEdit();
-    } catch (err) {
-      toast(errorMessage(err), 'error');
-      controls.forEach((el) => (el.disabled = false));
-      input.focus();
+    if (focus?.id && focus.action) {
+      tbody.querySelector<HTMLElement>(`tr[data-id="${focus.id}"] [data-action="${focus.action}"]`)?.focus();
     }
   }
-
-  tbody.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const row = (event.target as Element).closest<HTMLTableRowElement>('tr');
-    if (row) void saveEdit(row, Number(row.dataset['id']));
-  });
-
-  tbody.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && editingId !== null) {
-      event.preventDefault();
-      const id = editingId;
-      stopEdit();
-      rowById(id)?.querySelector<HTMLButtonElement>('[data-action="edit-alias"]')?.focus();
-    }
-  });
 
   $redirects.subscribe(render);
   $loaded.subscribe(render);
   $lastUpdated.subscribe(renderCount);
 
+  // --- Modal de edición del alias (fuera de la tabla: los refrescos no le afectan)
+  const dialog = document.getElementById('alias-dialog') as HTMLDialogElement;
+  const aliasForm = document.getElementById('alias-form') as HTMLFormElement;
+  const aliasInput = document.getElementById('alias-dialog-input') as HTMLInputElement;
+  const aliasContext = document.getElementById('alias-dialog-context')!;
+  const aliasError = document.getElementById('alias-dialog-error')!;
+  const aliasSave = document.getElementById('alias-dialog-save') as HTMLButtonElement;
+  let editing: Redirect | null = null;
+
+  function setAliasError(message: string | null): void {
+    aliasError.textContent = message ?? '';
+    aliasError.hidden = !message;
+    aliasInput.setAttribute('aria-invalid', message ? 'true' : 'false');
+  }
+
+  function setSaving(saving: boolean): void {
+    aliasInput.disabled = saving;
+    aliasSave.disabled = saving;
+    aliasSave.textContent = saving ? 'Guardando_' : 'Guardar';
+  }
+
+  function openAliasDialog(id: number): void {
+    const redirect = $redirects.get().find((r) => r.id === id);
+    if (!redirect) return;
+    editing = redirect;
+    aliasContext.textContent = `${redirect.target} → ${redirect.public_address}`;
+    aliasInput.value = redirect.alias;
+    setAliasError(null);
+    setSaving(false);
+    dialog.showModal();
+    aliasInput.focus();
+    aliasInput.select();
+  }
+
+  aliasForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!editing) return;
+    const alias = aliasInput.value.trim();
+    if (!alias) {
+      setAliasError('El alias no puede quedar vacío.');
+      aliasInput.focus();
+      return;
+    }
+    if (alias === editing.alias) {
+      dialog.close();
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await renameRedirect(editing.id, alias);
+      dialog.close();
+      toast(`Alias actualizado: ${updated.alias}`, 'success', 2500);
+    } catch (err) {
+      setSaving(false);
+      setAliasError(errorMessage(err));
+      aliasInput.focus();
+    }
+  });
+
+  document.getElementById('alias-dialog-cancel')!.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => {
+    // Devolver el foco al ✎ de la fila editada (la fila puede haberse repintado).
+    const id = editing?.id;
+    editing = null;
+    if (id !== undefined) {
+      tbody.querySelector<HTMLButtonElement>(`tr[data-id="${id}"] [data-action="edit-alias"]`)?.focus();
+    }
+  });
+
+  // --- Acciones de las filas
   tbody.addEventListener('click', async (event) => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-action]');
     const row = button?.closest<HTMLTableRowElement>('tr');
@@ -262,10 +296,7 @@ import Button from '../ui/Button.astro';
 
     switch (button.dataset['action']) {
       case 'edit-alias':
-        startEdit(row, id);
-        break;
-      case 'cancel-alias':
-        stopEdit();
+        openAliasDialog(id);
         break;
       case 'copy': {
         const text = field(row, 'public').textContent ?? '';
@@ -278,7 +309,6 @@ import Button from '../ui/Button.astro';
         break;
       }
       case 'ask-delete':
-        editingId = null;
         confirming.add(id);
         render();
         break;

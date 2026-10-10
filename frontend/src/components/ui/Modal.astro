@@ -1,0 +1,33 @@
+---
+/**
+ * Modal accesible sobre <dialog> nativo: showModal() bloquea el fondo, gestiona
+ * el foco y cierra con Esc. Clic fuera del panel también lo cierra.
+ */
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+---
+
+<dialog
+  id={id}
+  aria-labelledby={`${id}-title`}
+  class="m-auto w-[min(30rem,calc(100vw-2rem))] bg-transparent p-0 text-ink backdrop:bg-void/80 backdrop:backdrop-blur-sm"
+  data-modal
+>
+  <div class="panel p-6 sm:p-8">
+    <h2 id={`${id}-title`} class="label"><span class="text-accent">✎</span> {title}</h2>
+    <slot />
+  </div>
+</dialog>
+
+<script>
+  // Cerrar al hacer clic en el fondo (el propio <dialog>, fuera del panel).
+  document.querySelectorAll<HTMLDialogElement>('dialog[data-modal]').forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
+</script>
